@@ -30,6 +30,10 @@ public class WindowsAPIException extends Exception {
 		switch (errorCode) {
 		case WinError.ERROR_INVALID_HANDLE:
 			return "The handle is invalid.";
+		case WinError.ERROR_PARTIAL_COPY:
+			return "Only part of a ReadProcessMemory or WriteProcessMemory request was completed.";
+		case WinError.ERROR_NOACCESS:
+			return "Invalid access to memory location.";
 		case WinError.ERROR_INVALID_WINDOW_HANDLE:
 			return "Invalid window handle.";
 		default:

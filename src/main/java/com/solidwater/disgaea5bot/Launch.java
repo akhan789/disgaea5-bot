@@ -21,6 +21,8 @@ public class Launch /* extends Application */ {
 	public static void main(String[] args) {
 		try {
 			WindowsUtils.openProcess("Disgaea 5 Complete");
+			//System.out.println(WindowsUtils.getFloatValue(0x07A6A518l, 0x00000008l, 8l));
+			System.out.println(WindowsUtils.getIntValue(0x19323A7C620l, 0, 4l));
 			// WindowsUtils.openProcess("disgaea5.exe");
 		} catch (WindowsAPIException e) {
 			e.printStackTrace();

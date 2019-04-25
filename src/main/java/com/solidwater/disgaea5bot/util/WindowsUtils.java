@@ -8,7 +8,9 @@ import com.solidwater.disgaea5bot.util.winapi.ExtendedAdvapi32;
 import com.solidwater.disgaea5bot.util.winapi.ExtendedKernel32;
 import com.solidwater.disgaea5bot.util.winapi.ExtendedPsapi;
 import com.solidwater.disgaea5bot.util.winapi.ExtendedUser32;
+import com.sun.jna.Memory;
 import com.sun.jna.Native;
+import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinDef.HWND;
@@ -107,6 +109,46 @@ public class WindowsUtils {
 			throw new WindowsAPIException("GetWindowThreadProcessId failed. Error " + Native.getLastError() + ": "
 					+ WindowsAPIException.getWindowsAPIErrorMessage(Native.getLastError()));
 		}
+	}
+
+	public static float getFloatValue(long address, long offset, long bytesToRead) throws WindowsAPIException {
+		if(WindowsUtils.process == null)
+			throw new WindowsAPIException("Process not initialised correctly");
+
+		IntByReference bytesRead = new IntByReference(0);
+		Memory buffer = new Memory(bytesToRead);
+		if (WindowsUtils.KERNEL_32.ReadProcessMemory(WindowsUtils.process, new Pointer(address), buffer,
+				(int) buffer.size(), bytesRead)) {
+			System.out.println("Bytes read: " + bytesRead.getValue());
+			return buffer.getFloat(offset);
+		} else {
+			throw new WindowsAPIException("ReadProcessMemory failed. Error " + Native.getLastError() + ": "
+					+ WindowsAPIException.getWindowsAPIErrorMessage(Native.getLastError()));
+		}
+	}
+
+	public static void setFloatValue(long address, float newValue) {
+
+	}
+
+	public static int getIntValue(long address, long offset, long bytesToRead) throws WindowsAPIException {
+		if(WindowsUtils.process == null)
+			throw new WindowsAPIException("Process not initialised correctly");
+
+		IntByReference bytesRead = new IntByReference(0);
+		Memory buffer = new Memory(bytesToRead);
+		if (WindowsUtils.KERNEL_32.ReadProcessMemory(WindowsUtils.process, new Pointer(address), buffer,
+				(int) buffer.size(), bytesRead)) {
+			System.out.println("Bytes read: " + bytesRead.getValue());
+			return buffer.getInt(offset);
+		} else {
+			throw new WindowsAPIException("ReadProcessMemory failed. Error " + Native.getLastError() + ": "
+					+ WindowsAPIException.getWindowsAPIErrorMessage(Native.getLastError()));
+		}
+	}
+
+	public static void setIntValue(long address, float newValue) {
+
 	}
 
 	public static void closeProcess() throws WindowsAPIException {
