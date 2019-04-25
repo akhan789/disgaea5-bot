@@ -3,6 +3,9 @@
  */
 package com.solidwater.disgaea5bot.util;
 
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+
 import com.solidwater.disgaea5bot.util.exceptions.WindowsAPIException;
 import com.solidwater.disgaea5bot.util.winapi.ExtendedAdvapi32;
 import com.solidwater.disgaea5bot.util.winapi.ExtendedKernel32;
@@ -33,7 +36,7 @@ public class WindowsUtils {
 	static final ExtendedPsapi PSAPI;
 
 	static volatile HANDLE process = null;
-	static volatile long processBaseAddress = 0l;
+	static volatile BigInteger processBaseAddress = BigInteger.valueOf(0l);
 
 	static {
 		USER_32 = ExtendedUser32.INSTANCE;
@@ -115,63 +118,59 @@ public class WindowsUtils {
 		}
 	}
 
-	public static float getFloatValue(long baseAddress, long[] offsets, long bytesToRead) throws WindowsAPIException {
-		if (WindowsUtils.process == null)
+	public static float getFloatValue(BigInteger staticPointerAddress, BigInteger[] offsets, long bytesToRead)
+			throws WindowsAPIException {
+		if (WindowsUtils.process == null) {
 			throw new WindowsAPIException("Process not initialised correctly");
+		}
 
-		IntByReference bytesRead = new IntByReference(0);
-		long processBaseAddress = WindowsUtils.getBaseAddressForProcess(1024);
-		System.out.println("Process base address: " + Long.toHexString(processBaseAddress));
-		baseAddress += processBaseAddress;
-		long address = baseAddress;
-		for (long offset : offsets) {
-			address += offset;
+		BigInteger processBaseAddress = WindowsUtils.getBaseAddressForProcess(1024);
+		System.out.println("Process base address: " + Long.toHexString(processBaseAddress.longValue()));
+		BigInteger address = processBaseAddress.add(staticPointerAddress);
+		System.out.println("New base address: " + Long.toHexString(address.longValue()));
+		address = WindowsUtils.getDynamicAddress(address, bytesToRead);
+		System.out.println("New dynamic address: " + Long.toHexString(address.longValue()));
+		for (BigInteger offset : offsets) {
+			address = address.add(offset);
+			System.out.println("Testing address: " + Long.toHexString(address.longValue()));
+			address = WindowsUtils.getDynamicAddress(address, bytesToRead);
+			System.out.println("Address value: " + Long.toHexString(address.longValue()));
+			System.out.println(WindowsUtils.getUnsignedLong(address).intValue());
 		}
-		System.out.println("Scanning address: " + Long.toHexString(address) + " from base address: "
-				+ Long.toHexString(baseAddress));
-		Memory buffer = new Memory(bytesToRead);
-		if (WindowsUtils.KERNEL_32.ReadProcessMemory(WindowsUtils.process, new Pointer(address), buffer,
-				(int) buffer.size(), bytesRead)) {
-			System.out.println("Bytes read: " + bytesRead.getValue());
-			return buffer.getFloat(0l);
-		} else {
-			throw new WindowsAPIException("ReadProcessMemory failed. Error " + Native.getLastError() + ": "
-					+ Kernel32Util.getLastErrorMessage());
+		try {
+			return Float.intBitsToFloat(WindowsUtils.getUnsignedLong(address).intValue());
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+		return 0l;
 	}
 
-	public static void setFloatValue(long baseAddress, float newValue) {
+	public static void setFloatValue(BigInteger baseAddress, float newValue) {
 
 	}
 
-	public static int getIntValue(long baseAddress, long[] offsets, long bytesToRead) throws WindowsAPIException {
-		if (WindowsUtils.process == null)
+	public static BigInteger getLongValue(BigInteger staticPointerAddress, BigInteger[] offsets, long bytesToRead)
+			throws WindowsAPIException {
+		if (WindowsUtils.process == null) {
 			throw new WindowsAPIException("Process not initialised correctly");
+		}
 
-		IntByReference bytesRead = new IntByReference(0);
-		long processBaseAddress = WindowsUtils.getBaseAddressForProcess(1024);
-		System.out.println("Process base address: " + Long.toHexString(processBaseAddress));
-		System.out.println("Value base address: " + Long.toHexString(baseAddress));
-		long dynamicAddress = WindowsUtils.getDynamicAddress(processBaseAddress, baseAddress, bytesToRead);
-		System.out.println("Dynamic address: " + Long.toHexString(dynamicAddress));
-		long address = dynamicAddress;
-		for (long offset : offsets) {
-			address += offset;
+		BigInteger processBaseAddress = WindowsUtils.getBaseAddressForProcess(1024);
+		System.out.println("Process base address: " + Long.toHexString(processBaseAddress.longValue()));
+		BigInteger address = processBaseAddress.add(staticPointerAddress);
+		System.out.println("New base address: " + Long.toHexString(address.longValue()));
+		address = WindowsUtils.getDynamicAddress(address, bytesToRead);
+		System.out.println("New dynamic address: " + Long.toHexString(address.longValue()));
+		for (BigInteger offset : offsets) {
+			address = address.add(offset);
+			System.out.println("Testing address: " + Long.toHexString(address.longValue()));
+			address = WindowsUtils.getDynamicAddress(address, bytesToRead);
+			System.out.println("Address value: " + Long.toHexString(address.longValue()));
 		}
-		System.out.println("Scanning address: " + Long.toHexString(address) + " from base address: "
-				+ Long.toHexString(baseAddress));
-		Memory buffer = new Memory(bytesToRead);
-		if (WindowsUtils.KERNEL_32.ReadProcessMemory(WindowsUtils.process, new Pointer(address), buffer,
-				(int) buffer.size(), bytesRead)) {
-			System.out.println("Bytes read: " + bytesRead.getValue());
-			return buffer.getInt(0l);
-		} else {
-			throw new WindowsAPIException("ReadProcessMemory failed. Error " + Native.getLastError() + ": "
-					+ Kernel32Util.getLastErrorMessage());
-		}
+		return address;
 	}
 
-	public static void setIntValue(long baseAddress, float newValue) {
+	public static void setIntValue(BigInteger baseAddress, float newValue) {
 
 	}
 
@@ -192,22 +191,21 @@ public class WindowsUtils {
 		return false;
 	}
 
-	protected static long getDynamicAddress(long processBaseAddress, long baseAddress, long bytesToRead)
+	protected static BigInteger getDynamicAddress(BigInteger processBaseAddress, long bytesToRead)
 			throws WindowsAPIException {
 		IntByReference bytesRead = new IntByReference(0);
 		Memory buffer = new Memory(bytesToRead);
-		processBaseAddress += baseAddress;
-		if (WindowsUtils.KERNEL_32.ReadProcessMemory(WindowsUtils.process, new Pointer(processBaseAddress), buffer,
-				(int) buffer.size(), bytesRead)) {
+		if (WindowsUtils.KERNEL_32.ReadProcessMemory(WindowsUtils.process, new Pointer(processBaseAddress.longValue()),
+				buffer, (int) buffer.size(), bytesRead)) {
 			System.out.println("Bytes read: " + bytesRead.getValue());
-			return buffer.getInt(0l);
+			return BigInteger.valueOf(buffer.getLong(0l));
 		} else {
 			throw new WindowsAPIException("ReadProcessMemory failed. Error " + Native.getLastError() + ": "
 					+ Kernel32Util.getLastErrorMessage());
 		}
 	}
 
-	protected static long getBaseAddressForProcess(int modulesLength) throws WindowsAPIException {
+	protected static BigInteger getBaseAddressForProcess(int modulesLength) throws WindowsAPIException {
 		HMODULE[] lphModules = new HMODULE[modulesLength];
 		IntByReference lpcbNeeded = new IntByReference(0);
 		if (WindowsUtils.PSAPI.EnumProcessModules(WindowsUtils.process, lphModules, lphModules.length, lpcbNeeded)) {
@@ -225,7 +223,8 @@ public class WindowsUtils {
 							MODULEINFO moduleInfo = new MODULEINFO();
 							if (WindowsUtils.PSAPI.GetModuleInformation(WindowsUtils.process, module, moduleInfo,
 									moduleInfo.size())) {
-								return Long.valueOf(String.valueOf(Pointer.nativeValue(moduleInfo.lpBaseOfDll)));
+								return BigInteger.valueOf(
+										Long.valueOf(String.valueOf(Pointer.nativeValue(moduleInfo.lpBaseOfDll))));
 							} else {
 								throw new WindowsAPIException("GetModuleInformation failed. Error "
 										+ Native.getLastError() + ": " + Kernel32Util.getLastErrorMessage());
@@ -241,6 +240,29 @@ public class WindowsUtils {
 			throw new WindowsAPIException("EnumProcessModules failed. Error " + Native.getLastError() + ": "
 					+ Kernel32Util.getLastErrorMessage());
 		}
-		return 0l;
+		return BigInteger.valueOf(0l);
+	}
+
+	protected static BigInteger getUnsignedLong(BigInteger value) {
+		return new BigInteger(1, WindowsUtils.longToBytes(value.longValue()));
+	}
+
+	protected static byte[] longToBytes(long x) {
+		ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+		buffer.putLong(x);
+		return buffer.array();
+	}
+
+	protected static float toSingle(byte[] bytes, int index) throws Exception {
+		if (bytes.length < 4)
+			throw new Exception("The length of the byte array must be at least 4 bytes long.");
+		return Float.intBitsToFloat(WindowsUtils.toInt32(bytes, index));
+	}
+
+	protected static int toInt32(byte[] bytes, int index) throws Exception {
+		if (bytes.length < 4)
+			throw new Exception("The length of the byte array must be at least 4 bytes long.");
+		return (int) ((int) (0xff & bytes[index]) << 56 | (int) (0xff & bytes[index + 1]) << 48
+				| (int) (0xff & bytes[index + 2]) << 40 | (int) (0xff & bytes[index + 3]) << 32);
 	}
 }
