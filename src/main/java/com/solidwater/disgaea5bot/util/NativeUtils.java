@@ -34,7 +34,6 @@ public class NativeUtils {
 	static final ExtendedAdvapi32 ADVAPI_32;
 	static final ExtendedPsapi PSAPI;
 
-	// static volatile HANDLE process = null;
 	static volatile BigInteger processBaseAddress = BigInteger.valueOf(0l);
 
 	static {
@@ -98,7 +97,7 @@ public class NativeUtils {
 
 		synchronized (syncObj) {
 			try {
-				syncObj.wait();
+				syncObj.wait(100);
 			} catch (InterruptedException e) {
 			}
 		}
@@ -112,7 +111,7 @@ public class NativeUtils {
 	 * @param windowHandle
 	 * @throws WindowsAPIException
 	 */
-	public synchronized static HANDLE openProcess(HANDLE windowHandle) throws WindowsAPIException {
+	public static HANDLE openProcess(HANDLE windowHandle) throws WindowsAPIException {
 		int processId = NativeUtils.getWindowThreadProcessId((HWND) windowHandle);
 		if ((windowHandle = NativeUtils.KERNEL_32.OpenProcess(
 				WinNT.PROCESS_VM_OPERATION | WinNT.PROCESS_VM_READ | WinNT.PROCESS_VM_WRITE, true,
@@ -148,6 +147,102 @@ public class NativeUtils {
 	 */
 	public static BigInteger getBaseAddress(HANDLE windowHandle, String processFilename) throws WindowsAPIException {
 		return NativeUtils.getBaseAddress(windowHandle, 1024, processFilename);
+	}
+
+	// TODO: make sure to add the static offset to list of offsets.
+	/**
+	 * Get a float value at the dynamic address located by the addition of the
+	 * offsets to the process' base address. Include base offset as the first offset
+	 * in the offsets array.
+	 * 
+	 * @param windowHandle
+	 * @param processBaseAddress
+	 * @param offsets
+	 * @return
+	 * @throws WindowsAPIException
+	 */
+	public static float getFloatValue(HANDLE windowHandle, BigInteger processBaseAddress, BigInteger[] offsets)
+			throws WindowsAPIException {
+		return GeneralUtils.convertToUnsignedFloat(NativeUtils.getValue(windowHandle, processBaseAddress, offsets));
+	}
+
+	public static void setFloatValue(BigInteger baseAddress, BigInteger newValue) {
+		// TODO:
+	}
+
+	/**
+	 * Get an int value at the dynamic address located by the addition of the
+	 * offsets to the process' base address. Include base offset as the first offset
+	 * in the offsets array.
+	 * 
+	 * @param windowHandle
+	 * @param processBaseAddress
+	 * @param offsets
+	 * @return
+	 * @throws WindowsAPIException
+	 */
+	public static int getIntValue(HANDLE windowHandle, BigInteger processBaseAddress, BigInteger[] offsets)
+			throws WindowsAPIException {
+		return NativeUtils.getValue(windowHandle, processBaseAddress, offsets).intValue();
+	}
+
+	public static void setIntValue(BigInteger baseAddress, BigInteger newValue) {
+		// TODO:
+	}
+
+	/**
+	 * Get a long value at the dynamic address located by the addition of the
+	 * offsets to the process' base address. Include base offset as the first offset
+	 * in the offsets array.
+	 * 
+	 * @param windowHandle
+	 * @param processBaseAddress
+	 * @param offsets
+	 * @return
+	 * @throws WindowsAPIException
+	 */
+	public static long getLongValue(HANDLE windowHandle, BigInteger processBaseAddress, BigInteger[] offsets)
+			throws WindowsAPIException {
+		return NativeUtils.getValue(windowHandle, processBaseAddress, offsets).longValue();
+	}
+
+	public static void setLongValue(BigInteger baseAddress, BigInteger newValue) {
+		// TODO:
+	}
+
+	/**
+	 * Get an unsigned long value at the dynamic address located by the addition of
+	 * the offsets to the process' base address. Include base offset as the first
+	 * offset in the offsets array.
+	 * 
+	 * @param windowHandle
+	 * @param processBaseAddress
+	 * @param offsets
+	 * @return
+	 * @throws WindowsAPIException
+	 */
+	public static String getUnsignedLongValue(HANDLE windowHandle, BigInteger processBaseAddress, BigInteger[] offsets)
+			throws WindowsAPIException {
+		return GeneralUtils.convertToUnsignedLong(NativeUtils.getValue(windowHandle, processBaseAddress, offsets));
+	}
+
+	public static void setUnsignedLongValue(BigInteger baseAddress, BigInteger newValue) {
+		// TODO:
+	}
+
+	private static BigInteger getValue(HANDLE windowHandle, BigInteger processBaseAddress, BigInteger[] offsets)
+			throws WindowsAPIException {
+		BigInteger dynamicAddress = BigInteger.valueOf(0l);
+		for (int i = 0; i < offsets.length; i++) {
+			// 8 bytes to read for 64 bit.
+			// TODO: Maybe check if we're 32 bit or 64 bit process in future?
+			if (i == 0) {
+				dynamicAddress = NativeUtils.getDynamicAddress(windowHandle, processBaseAddress.add(offsets[i]), 8l);
+			} else {
+				dynamicAddress = NativeUtils.getDynamicAddress(windowHandle, dynamicAddress.add(offsets[i]), 8l);
+			}
+		}
+		return dynamicAddress;
 	}
 
 	private static BigInteger getBaseAddress(HANDLE windowHandle, int modulesLength, String processFilename)
@@ -222,62 +317,10 @@ public class NativeUtils {
 		Memory buffer = new Memory(bytesToRead);
 		if (NativeUtils.KERNEL_32.ReadProcessMemory(handle, new Pointer(processBaseAddress.longValue()), buffer,
 				(int) buffer.size(), bytesRead)) {
-			System.out.println("Bytes read: " + bytesRead.getValue());
 			return BigInteger.valueOf(buffer.getLong(0l));
 		} else {
 			throw new WindowsAPIException("ReadProcessMemory failed. Error " + Native.getLastError() + ": "
 					+ Kernel32Util.getLastErrorMessage());
 		}
-	}
-
-	// ---- OLD CODE ----
-	public static float getFloatValue(BigInteger staticPointerAddress, BigInteger[] offsets)
-			throws WindowsAPIException {
-		if (NativeUtils.process == null) {
-			throw new WindowsAPIException("Process not initialised correctly");
-		}
-
-		BigInteger processBaseAddress = NativeUtils.getBaseAddress(1024);
-		System.out.println("Process base address: " + Long.toHexString(processBaseAddress.longValue()));
-		BigInteger address = processBaseAddress.add(staticPointerAddress);
-		System.out.println("New base address: " + Long.toHexString(address.longValue()));
-		address = NativeUtils.getDynamicAddress(address, 8l);
-		System.out.println("New dynamic address: " + Long.toHexString(address.longValue()));
-		for (BigInteger offset : offsets) {
-			address = address.add(offset);
-			System.out.println("Testing address: " + Long.toHexString(address.longValue()));
-			address = NativeUtils.getDynamicAddress(address, 8l);
-			System.out.println("Address value: " + Long.toHexString(address.longValue()));
-		}
-		return GeneralUtils.convertToUnsignedFloat(address);
-	}
-
-	public static void setFloatValue(BigInteger baseAddress, BigInteger newValue) {
-
-	}
-
-	public static BigInteger getLongValue(BigInteger staticPointerAddress, BigInteger[] offsets)
-			throws WindowsAPIException {
-		if (NativeUtils.process == null) {
-			throw new WindowsAPIException("Process not initialised correctly");
-		}
-
-		BigInteger processBaseAddress = NativeUtils.getBaseAddress(1024);
-		System.out.println("Process base address: " + Long.toHexString(processBaseAddress.longValue()));
-		BigInteger address = processBaseAddress.add(staticPointerAddress);
-		System.out.println("New base address: " + Long.toHexString(address.longValue()));
-		address = NativeUtils.getDynamicAddress(address, 8l);
-		System.out.println("New dynamic address: " + Long.toHexString(address.longValue()));
-		for (BigInteger offset : offsets) {
-			address = address.add(offset);
-			System.out.println("Testing address: " + Long.toHexString(address.longValue()));
-			address = NativeUtils.getDynamicAddress(address, 8l);
-			System.out.println("Address value: " + Long.toHexString(address.longValue()));
-		}
-		return address;
-	}
-
-	public static void setLongValue(BigInteger baseAddress, BigInteger newValue) {
-
 	}
 }

@@ -3,7 +3,10 @@
  */
 package com.solidwater.disgaea5bot;
 
+import java.math.BigInteger;
+
 import com.solidwater.disgaea5bot.entity.Disgaea5Process;
+import com.solidwater.disgaea5bot.entity.PlayerCharacter;
 import com.solidwater.disgaea5bot.util.exception.WindowsAPIException;
 
 /**
@@ -22,19 +25,18 @@ public class Launch /* extends Application */ {
 		Disgaea5Process process = null;
 		try {
 			process = new Disgaea5Process();
-			//TODO: Use BigInteger for everything since the float value is exceeding size of signed long. 
-			//System.out.println(NativeUtils.getFloatValue(BigInteger.valueOf(PlayerCharacter.CURRENT_POS_BASE_ADDRESS), new BigInteger[] {BigInteger.valueOf(PlayerCharacter.CURRENT_Y_WAYPOINT_OFFSET)}));
-			//System.out.println(WindowsUtils.getIntValue(0x1D1DCB67EC0l, new long[] {0}, 4l));
-			//System.out.println(Long.toHexString(Long.parseLong("2217019299680")));
-			//System.out.println(WindowsUtils.getLongValue(0x00B66A20l, new long[] {0xD0l, 0x4D8l}, 8l)); // 8 bytes for 64-bit processes.
-			//System.out.println(WindowsUtils.getIntValue(0x00B66A20l, new long[] {0x0l}, 4l));
-			// WindowsUtils.openProcess("disgaea5.exe");
+			System.out.println("Player Y Pos = " + process.getFloatValue(new BigInteger[] {
+					PlayerCharacter.CURRENT_POS_BASE_OFFSET, PlayerCharacter.CURRENT_Y_WAYPOINT_OFFSET }));
+			System.out.println("Player Target's HP = "
+					+ process.getIntValue(new BigInteger[] { PlayerCharacter.CURRENT_TARGET_HP_BASE_OFFSET,
+							PlayerCharacter.CURRENT_TARGET_HP_OFFSET_1, PlayerCharacter.CURRENT_TARGET_HP_OFFSET_2 }));
 		} catch (WindowsAPIException e) {
 			e.printStackTrace();
 		} finally {
 			try {
-				if(process != null)
+				if (process != null) {
 					process.closeProcess();
+				}
 			} catch (WindowsAPIException e) {
 				e.printStackTrace();
 			}

@@ -7,7 +7,7 @@ import com.solidwater.disgaea5bot.util.exception.WindowsAPIException;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 
 public abstract class AbstractProcess {
-	private volatile HANDLE processWindowHandle;
+	private HANDLE processWindowHandle;
 	private BigInteger baseAddress = BigInteger.valueOf(0x0l);
 	private boolean processOpen = false;
 
@@ -24,6 +24,7 @@ public abstract class AbstractProcess {
 		this.processWindowHandle = NativeUtils.getWindowHandle(windowTitle);
 		this.processWindowHandle = NativeUtils.openProcess(this.processWindowHandle);
 		this.baseAddress = NativeUtils.getBaseAddress(this.processWindowHandle, processFilename);
+		System.out.println(Long.toHexString(this.baseAddress.longValue()));
 	}
 
 	public void closeProcess() throws WindowsAPIException {
@@ -32,11 +33,33 @@ public abstract class AbstractProcess {
 		}
 	}
 
+	public float getFloatValue(BigInteger[] offsets) throws WindowsAPIException {
+		return NativeUtils.getFloatValue(this.processWindowHandle, this.baseAddress, offsets);
+	}
+
+	public int getIntValue(BigInteger[] offsets) throws WindowsAPIException {
+		return NativeUtils.getIntValue(this.processWindowHandle, this.baseAddress, offsets);
+	}
+
+	public long getLongValue(BigInteger[] offsets) throws WindowsAPIException {
+		return NativeUtils.getLongValue(this.processWindowHandle, this.baseAddress, offsets);
+	}
+
+	public String getUnsignedLongValue(BigInteger[] offsets) throws WindowsAPIException {
+		return NativeUtils.getUnsignedLongValue(this.processWindowHandle, this.baseAddress, offsets);
+	}
+
 	public boolean isProcessOpen() {
 		return processOpen;
 	}
 
 	public void setProcessOpen(boolean processOpen) {
 		this.processOpen = processOpen;
+	}
+
+	@Override
+	public String toString() {
+		// TODO: return process information.
+		return super.toString();
 	}
 }
