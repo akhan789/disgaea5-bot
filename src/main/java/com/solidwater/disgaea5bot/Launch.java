@@ -7,6 +7,7 @@ import java.math.BigInteger;
 
 import com.solidwater.disgaea5bot.entity.Disgaea5Process;
 import com.solidwater.disgaea5bot.entity.PlayerCharacter;
+import com.solidwater.disgaea5bot.util.NativeUtils;
 import com.solidwater.disgaea5bot.util.exception.WindowsAPIException;
 
 /**
@@ -25,11 +26,17 @@ public class Launch /* extends Application */ {
 		Disgaea5Process process = null;
 		try {
 			process = new Disgaea5Process();
-			System.out.println("Player Y Pos = " + process.getFloatValue(new BigInteger[] {
-					PlayerCharacter.CURRENT_POS_BASE_OFFSET, PlayerCharacter.CURRENT_Y_WAYPOINT_OFFSET }));
-			System.out.println("Player Target's HP = "
-					+ process.getIntValue(new BigInteger[] { PlayerCharacter.CURRENT_TARGET_HP_BASE_OFFSET,
-							PlayerCharacter.CURRENT_TARGET_HP_OFFSET_1, PlayerCharacter.CURRENT_TARGET_HP_OFFSET_2 }));
+			PlayerCharacter playerCharacter = new PlayerCharacter(process);
+			System.out.println("Player Y Pos = " + playerCharacter.getCurrentYPos());
+			System.out.println("Player X Pos = " + playerCharacter.getCurrentXPos());
+			System.out.println("Player Z Pos = " + playerCharacter.getCurrentZPos());
+			System.out.println("Player Target's HP = " + playerCharacter.getCurrentTargetHP());
+			System.out.println("Player Money Amount = " + playerCharacter.getMoney());
+			System.out.println(Long.toHexString(NativeUtils.getLastDynamicAddress().longValue()));
+			// playerCharacter.setCurrentZPos(-150.0f);
+			// playerCharacter.setCurrentTargetHP(11111);
+			playerCharacter.setMoney(BigInteger.valueOf(77800359970l));
+			System.out.println("Player Money Amount = " + playerCharacter.getMoney());
 		} catch (WindowsAPIException e) {
 			e.printStackTrace();
 		} finally {

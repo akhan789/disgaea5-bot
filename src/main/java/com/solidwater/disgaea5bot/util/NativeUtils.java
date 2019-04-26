@@ -34,7 +34,7 @@ public class NativeUtils {
 	static final ExtendedAdvapi32 ADVAPI_32;
 	static final ExtendedPsapi PSAPI;
 
-	static volatile BigInteger processBaseAddress = BigInteger.valueOf(0l);
+	static volatile BigInteger lastDynamicAddress = BigInteger.valueOf(0l);
 
 	static {
 		USER_32 = ExtendedUser32.INSTANCE;
@@ -230,16 +230,50 @@ public class NativeUtils {
 		// TODO:
 	}
 
+	public static BigInteger getBigIntegerValue(HANDLE windowHandle, BigInteger processBaseAddress,
+			BigInteger[] offsets) throws WindowsAPIException {
+		return NativeUtils.getValue(windowHandle, processBaseAddress, offsets);
+	}
+
+	public static void setBigIntegerValue(BigInteger baseAddress, BigInteger newValue) {
+		// TODO:
+	}
+
+	public static BigInteger getLastDynamicAddress() {
+		return NativeUtils.lastDynamicAddress;
+	}
+
+//	public static float byteArrayToFloat(byte[] bytes) {
+//	    int intBits = 
+//	      bytes[0] << 24 | (bytes[1] & 0xFF) << 16 | (bytes[2] & 0xFF) << 8 | (bytes[3] & 0xFF);
+//	    return Float.intBitsToFloat(intBits);  
+//	}
+	public static boolean setDynamicAddressValue(HANDLE handle, BigInteger dynamicAddress, byte[] data)
+			throws WindowsAPIException {
+		// System.out.println("converted to: " + byteArrayToFloat(data));
+		// System.out.println("converted to: " + Integer.pa(data));
+		long size = data.length;
+		Memory buffer = new Memory(size);
+		if (!NativeUtils.KERNEL_32.WriteProcessMemory(handle, new Pointer(dynamicAddress.longValue()), buffer,
+				(int) buffer.size(), new IntByReference(0))) {
+			throw new WindowsAPIException("WriteProcessMemory failed. Error " + Native.getLastError() + ": "
+					+ Kernel32Util.getLastErrorMessage());
+		}
+		return true;
+	}
+
 	private static BigInteger getValue(HANDLE windowHandle, BigInteger processBaseAddress, BigInteger[] offsets)
 			throws WindowsAPIException {
 		BigInteger dynamicAddress = BigInteger.valueOf(0l);
 		for (int i = 0; i < offsets.length; i++) {
 			// 8 bytes to read for 64 bit.
 			// TODO: Maybe check if we're 32 bit or 64 bit process in future?
+			NativeUtils.lastDynamicAddress = dynamicAddress.add(offsets[i]);
 			if (i == 0) {
-				dynamicAddress = NativeUtils.getDynamicAddress(windowHandle, processBaseAddress.add(offsets[i]), 8l);
+				dynamicAddress = NativeUtils.getDynamicAddressValue(windowHandle, processBaseAddress.add(offsets[i]),
+						8l);
 			} else {
-				dynamicAddress = NativeUtils.getDynamicAddress(windowHandle, dynamicAddress.add(offsets[i]), 8l);
+				dynamicAddress = NativeUtils.getDynamicAddressValue(windowHandle, dynamicAddress.add(offsets[i]), 8l);
 			}
 		}
 		return dynamicAddress;
@@ -311,7 +345,7 @@ public class NativeUtils {
 		}
 	}
 
-	private static BigInteger getDynamicAddress(HANDLE handle, BigInteger processBaseAddress, long bytesToRead)
+	private static BigInteger getDynamicAddressValue(HANDLE handle, BigInteger processBaseAddress, long bytesToRead)
 			throws WindowsAPIException {
 		IntByReference bytesRead = new IntByReference(0);
 		Memory buffer = new Memory(bytesToRead);
