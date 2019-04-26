@@ -6,5 +6,4 @@ import com.sun.jna.win32.W32APIOptions;
 
 public interface ExtendedAdvapi32 extends Advapi32 {
 	ExtendedAdvapi32 INSTANCE = Native.load("Advapi32", ExtendedAdvapi32.class, W32APIOptions.DEFAULT_OPTIONS);
-
 }

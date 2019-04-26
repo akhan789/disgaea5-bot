@@ -5,8 +5,10 @@ package com.solidwater.disgaea5bot;
 
 import java.math.BigInteger;
 
-import com.solidwater.disgaea5bot.util.WindowsUtils;
-import com.solidwater.disgaea5bot.util.exceptions.WindowsAPIException;
+import com.solidwater.disgaea5bot.entity.Disgaea5Process;
+import com.solidwater.disgaea5bot.entity.PlayerCharacter;
+import com.solidwater.disgaea5bot.util.NativeUtils;
+import com.solidwater.disgaea5bot.util.exception.WindowsAPIException;
 
 /**
  * @author AK
@@ -21,10 +23,11 @@ public class Launch /* extends Application */ {
 	 * Scene(new StackPane(l), 640, 480); stage.setScene(scene); stage.show(); }
 	 */
 	public static void main(String[] args) {
+		Disgaea5Process process = null;
 		try {
-			WindowsUtils.openProcess("Disgaea 5 Complete");
+			process = new Disgaea5Process();
 			//TODO: Use BigInteger for everything since the float value is exceeding size of signed long. 
-			System.out.println(WindowsUtils.getFloatValue(BigInteger.valueOf(0x07A6A518l), new BigInteger[] {BigInteger.valueOf(0x8l)}, 8l));
+			//System.out.println(NativeUtils.getFloatValue(BigInteger.valueOf(PlayerCharacter.CURRENT_POS_BASE_ADDRESS), new BigInteger[] {BigInteger.valueOf(PlayerCharacter.CURRENT_Y_WAYPOINT_OFFSET)}));
 			//System.out.println(WindowsUtils.getIntValue(0x1D1DCB67EC0l, new long[] {0}, 4l));
 			//System.out.println(Long.toHexString(Long.parseLong("2217019299680")));
 			//System.out.println(WindowsUtils.getLongValue(0x00B66A20l, new long[] {0xD0l, 0x4D8l}, 8l)); // 8 bytes for 64-bit processes.
@@ -34,7 +37,8 @@ public class Launch /* extends Application */ {
 			e.printStackTrace();
 		} finally {
 			try {
-				WindowsUtils.closeProcess();
+				if(process != null)
+					process.closeProcess();
 			} catch (WindowsAPIException e) {
 				e.printStackTrace();
 			}
