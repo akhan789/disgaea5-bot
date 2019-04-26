@@ -34,7 +34,7 @@ public class NativeUtils {
 	static final ExtendedAdvapi32 ADVAPI_32;
 	static final ExtendedPsapi PSAPI;
 
-	static volatile HANDLE process = null;
+	// static volatile HANDLE process = null;
 	static volatile BigInteger processBaseAddress = BigInteger.valueOf(0l);
 
 	static {
@@ -76,16 +76,17 @@ public class NativeUtils {
 	 * Get the Window Handle for the Window Title provided.
 	 * 
 	 * @param windowTitle
-	 * @return the HWND
+	 * @return
 	 * @throws WindowsAPIException
 	 */
-	public static void setWindowHandleDetails(HWND windowHandle, String windowTitle) throws WindowsAPIException {
+	public static HANDLE getWindowHandle(String windowTitle) throws WindowsAPIException {
+		final HANDLE[] windowHandles = new HANDLE[1];
 		final Object syncObj = new Object();
 		new Thread(() -> {
 			NativeUtils.USER_32.EnumWindows((hWnd, userData) -> {
 				String hWndTitle = NativeUtils.getWindowText(hWnd, NativeUtils.getWindowTextLength(hWnd));
 				if (NativeUtils.isWindowVisible(hWnd) && !hWndTitle.isEmpty() && hWndTitle.equals(windowTitle)) {
-					NativeUtils.process = hWnd;
+					windowHandles[0] = hWnd;
 					synchronized (syncObj) {
 						syncObj.notifyAll();
 					}
@@ -101,7 +102,7 @@ public class NativeUtils {
 			} catch (InterruptedException e) {
 			}
 		}
-		windowHandle = (HWND) NativeUtils.process;
+		return windowHandles[0];
 	}
 
 	/**
@@ -111,11 +112,13 @@ public class NativeUtils {
 	 * @param windowHandle
 	 * @throws WindowsAPIException
 	 */
-	public synchronized static void openProcess(HWND windowHandle) throws WindowsAPIException {
-		int processId = NativeUtils.getWindowThreadProcessId(windowHandle);
-		if ((windowHandle = (HWND) NativeUtils.KERNEL_32.OpenProcess(
+	public synchronized static HANDLE openProcess(HANDLE windowHandle) throws WindowsAPIException {
+		int processId = NativeUtils.getWindowThreadProcessId((HWND) windowHandle);
+		if ((windowHandle = NativeUtils.KERNEL_32.OpenProcess(
 				WinNT.PROCESS_VM_OPERATION | WinNT.PROCESS_VM_READ | WinNT.PROCESS_VM_WRITE, true,
-				processId)) == null) {
+				processId)) != null) {
+			return windowHandle;
+		} else {
 			throw new WindowsAPIException(
 					"OpenProcess failed. Error " + Native.getLastError() + ": " + Kernel32Util.getLastErrorMessage());
 		}
@@ -127,26 +130,27 @@ public class NativeUtils {
 	 * @param windowHandle
 	 * @throws WindowsAPIException
 	 */
-	public static void closeProcess(HWND windowHandle) throws WindowsAPIException {
-		if (!NativeUtils.KERNEL_32.CloseHandle(windowHandle))
+	public static void closeProcess(HANDLE windowHandle) throws WindowsAPIException {
+		if (!NativeUtils.KERNEL_32.CloseHandle(windowHandle)) {
 			throw new WindowsAPIException(
 					"CloseHandle failed. Error " + Native.getLastError() + ": " + Kernel32Util.getLastErrorMessage());
+		}
 	}
 
 	/**
 	 * Get the base address for the provided Window Handle and its associated
 	 * filename.
 	 * 
-	 * @param hWnd
+	 * @param handle
 	 * @param processFilename
 	 * @return
 	 * @throws WindowsAPIException
 	 */
-	public static BigInteger getBaseAddress(HWND windowHandle, String processFilename) throws WindowsAPIException {
+	public static BigInteger getBaseAddress(HANDLE windowHandle, String processFilename) throws WindowsAPIException {
 		return NativeUtils.getBaseAddress(windowHandle, 1024, processFilename);
 	}
 
-	private static BigInteger getBaseAddress(HWND windowHandle, int modulesLength, String processFilename)
+	private static BigInteger getBaseAddress(HANDLE windowHandle, int modulesLength, String processFilename)
 			throws WindowsAPIException {
 		HMODULE[] lphModules = NativeUtils.getProcessModules(windowHandle, modulesLength);
 		for (HMODULE module : lphModules) {
@@ -164,35 +168,35 @@ public class NativeUtils {
 		return BigInteger.valueOf(0l);
 	}
 
-	private static int getWindowTextLength(HWND hWnd) {
-		return NativeUtils.USER_32.GetWindowTextLength(hWnd);
+	private static int getWindowTextLength(HANDLE handle) {
+		return NativeUtils.USER_32.GetWindowTextLength((HWND) handle);
 	}
 
-	private static String getWindowText(HWND hWnd, int bufferSize) {
+	private static String getWindowText(HANDLE handle, int bufferSize) {
 		char[] windowText = new char[bufferSize];
-		NativeUtils.USER_32.GetWindowText(hWnd, windowText, bufferSize + 1);
+		NativeUtils.USER_32.GetWindowText((HWND) handle, windowText, bufferSize + 1);
 		return new String(windowText);
 	}
 
-	private static boolean isWindowVisible(HWND hWnd) {
-		return NativeUtils.USER_32.IsWindowVisible(hWnd);
+	private static boolean isWindowVisible(HANDLE handle) {
+		return NativeUtils.USER_32.IsWindowVisible((HWND) handle);
 	}
 
-	private static int getWindowThreadProcessId(HWND hWnd) throws WindowsAPIException {
+	private static int getWindowThreadProcessId(HANDLE handle) throws WindowsAPIException {
 		IntByReference processId = new IntByReference();
-		if (NativeUtils.USER_32.GetWindowThreadProcessId(hWnd, processId) == 0) {
+		if (NativeUtils.USER_32.GetWindowThreadProcessId((HWND) handle, processId) == 0) {
 			throw new WindowsAPIException("GetWindowThreadProcessId failed. Error " + Native.getLastError() + ": "
 					+ Kernel32Util.getLastErrorMessage());
 		}
 		return processId.getValue();
 	}
 
-	private static HMODULE[] getProcessModules(HWND hWnd, int modulesLength) throws WindowsAPIException {
+	private static HMODULE[] getProcessModules(HANDLE handle, int modulesLength) throws WindowsAPIException {
 		HMODULE[] lphModules = new HMODULE[modulesLength];
 		IntByReference lpcbNeeded = new IntByReference(0);
-		if (NativeUtils.PSAPI.EnumProcessModules(hWnd, lphModules, lphModules.length, lpcbNeeded)) {
+		if (NativeUtils.PSAPI.EnumProcessModules(handle, lphModules, lphModules.length, lpcbNeeded)) {
 			if (lphModules.length < lpcbNeeded.getValue()) {
-				return NativeUtils.getProcessModules(hWnd, lpcbNeeded.getValue());
+				return NativeUtils.getProcessModules(handle, lpcbNeeded.getValue());
 			} else {
 				return lphModules;
 			}
@@ -202,9 +206,9 @@ public class NativeUtils {
 		}
 	}
 
-	private static String getModuleFilename(HWND hWnd, HMODULE module) throws WindowsAPIException {
+	private static String getModuleFilename(HANDLE handle, HMODULE module) throws WindowsAPIException {
 		byte[] moduleFileName = new byte[1024];
-		if (NativeUtils.PSAPI.GetModuleFileNameExA(hWnd, module, moduleFileName, moduleFileName.length) != 0) {
+		if (NativeUtils.PSAPI.GetModuleFileNameExA(handle, module, moduleFileName, moduleFileName.length) != 0) {
 			return Native.toString(moduleFileName);
 		} else {
 			throw new WindowsAPIException("GetModuleFileNameExA failed. Error " + Native.getLastError() + ": "
@@ -212,12 +216,12 @@ public class NativeUtils {
 		}
 	}
 
-	private static BigInteger getDynamicAddress(BigInteger processBaseAddress, long bytesToRead)
+	private static BigInteger getDynamicAddress(HANDLE handle, BigInteger processBaseAddress, long bytesToRead)
 			throws WindowsAPIException {
 		IntByReference bytesRead = new IntByReference(0);
 		Memory buffer = new Memory(bytesToRead);
-		if (NativeUtils.KERNEL_32.ReadProcessMemory(NativeUtils.process, new Pointer(processBaseAddress.longValue()),
-				buffer, (int) buffer.size(), bytesRead)) {
+		if (NativeUtils.KERNEL_32.ReadProcessMemory(handle, new Pointer(processBaseAddress.longValue()), buffer,
+				(int) buffer.size(), bytesRead)) {
 			System.out.println("Bytes read: " + bytesRead.getValue());
 			return BigInteger.valueOf(buffer.getLong(0l));
 		} else {

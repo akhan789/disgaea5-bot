@@ -9,4 +9,15 @@ public class Disgaea5Process extends AbstractProcess {
 	public Disgaea5Process() throws WindowsAPIException {
 		super(Disgaea5Process.WINDOW_TITLE, Disgaea5Process.PROCESS_FILENAME);
 	}
+
+	@Override
+	public void openProcess() {
+		if (!isProcessOpen()) {
+			try {
+				openProcess(Disgaea5Process.WINDOW_TITLE, Disgaea5Process.PROCESS_FILENAME);
+			} catch (WindowsAPIException e) {
+				e.printStackTrace();
+			}
+		}
+	}
 }

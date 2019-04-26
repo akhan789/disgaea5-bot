@@ -3,11 +3,7 @@
  */
 package com.solidwater.disgaea5bot;
 
-import java.math.BigInteger;
-
 import com.solidwater.disgaea5bot.entity.Disgaea5Process;
-import com.solidwater.disgaea5bot.entity.PlayerCharacter;
-import com.solidwater.disgaea5bot.util.NativeUtils;
 import com.solidwater.disgaea5bot.util.exception.WindowsAPIException;
 
 /**
