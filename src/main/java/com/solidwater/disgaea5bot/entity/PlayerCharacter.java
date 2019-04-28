@@ -2,6 +2,7 @@ package com.solidwater.disgaea5bot.entity;
 
 import java.math.BigInteger;
 
+import com.solidwater.disgaea5bot.entity.type.DynamicMemory;
 import com.solidwater.disgaea5bot.util.NativeUtils;
 import com.solidwater.disgaea5bot.util.exception.WindowsAPIException;
 
@@ -99,29 +100,5 @@ public class PlayerCharacter {
 
 	public void setMoney(BigInteger newMoney) throws WindowsAPIException {
 		this.process.setValue(this.money.getDynamicAddress(), newMoney);
-	}
-
-	public class DynamicMemory<T> {
-		private T value;
-		private BigInteger dynamicAddress = BigInteger.valueOf(0l);
-
-		public DynamicMemory() {
-		}
-
-		public T getValue() {
-			return value;
-		}
-
-		public void setValue(T value) {
-			this.value = value;
-		}
-
-		public BigInteger getDynamicAddress() {
-			return dynamicAddress;
-		}
-
-		public void setDynamicAddress(BigInteger dynamicAddress) {
-			this.dynamicAddress = dynamicAddress;
-		}
 	}
 }

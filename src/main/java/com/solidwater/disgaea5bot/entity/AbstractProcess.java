@@ -1,8 +1,8 @@
 package com.solidwater.disgaea5bot.entity;
 
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 
+import com.solidwater.disgaea5bot.util.GeneralUtils;
 import com.solidwater.disgaea5bot.util.NativeUtils;
 import com.solidwater.disgaea5bot.util.exception.WindowsAPIException;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
@@ -35,18 +35,8 @@ public abstract class AbstractProcess implements Process {
 	}
 
 	public void setValue(BigInteger dynamicAddress, Object data) throws WindowsAPIException {
-		// Allocate 8 bytes for 64 bit.
-		System.out.println(data);
-		if (data instanceof Float) {
-			NativeUtils.setDynamicAddressValue(this.processWindowHandle, dynamicAddress,
-					ByteBuffer.allocate(8).putFloat((Float) data).array());
-		} else if (data instanceof Integer) {
-			NativeUtils.setDynamicAddressValue(this.processWindowHandle, dynamicAddress,
-					ByteBuffer.allocate(8).putInt(((Integer) data)).array());
-		} else if (data instanceof BigInteger) {
-			NativeUtils.setDynamicAddressValue(this.processWindowHandle, dynamicAddress,
-					((BigInteger) data).toByteArray());
-		}
+		NativeUtils.setDynamicAddressValue(this.processWindowHandle, dynamicAddress,
+				GeneralUtils.hexObjectToByteArray(data));
 	}
 
 	public float getFloatValue(BigInteger[] offsets) throws WindowsAPIException {
@@ -65,7 +55,6 @@ public abstract class AbstractProcess implements Process {
 		return NativeUtils.getUnsignedLongValue(this.processWindowHandle, this.baseAddress, offsets);
 	}
 
-	@Override
 	public BigInteger getBigIntegerValue(BigInteger[] offsets) throws WindowsAPIException {
 		return NativeUtils.getBigIntegerValue(this.processWindowHandle, this.baseAddress, offsets);
 	}

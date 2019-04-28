@@ -1,19 +1,9 @@
-/**
- * 
- */
 package com.solidwater.disgaea5bot;
-
-import java.math.BigInteger;
 
 import com.solidwater.disgaea5bot.entity.Disgaea5Process;
 import com.solidwater.disgaea5bot.entity.PlayerCharacter;
-import com.solidwater.disgaea5bot.util.NativeUtils;
 import com.solidwater.disgaea5bot.util.exception.WindowsAPIException;
 
-/**
- * @author AK
- *
- */
 public class Launch /* extends Application */ {
 	/*
 	 * @Override public void start(Stage stage) { String javaVersion =
@@ -32,11 +22,9 @@ public class Launch /* extends Application */ {
 			System.out.println("Player Z Pos = " + playerCharacter.getCurrentZPos());
 			System.out.println("Player Target's HP = " + playerCharacter.getCurrentTargetHP());
 			System.out.println("Player Money Amount = " + playerCharacter.getMoney());
-			System.out.println(Long.toHexString(NativeUtils.getLastDynamicAddress().longValue()));
 			// playerCharacter.setCurrentZPos(-150.0f);
 			// playerCharacter.setCurrentTargetHP(11111);
-			playerCharacter.setMoney(BigInteger.valueOf(77800359970l));
-			System.out.println("Player Money Amount = " + playerCharacter.getMoney());
+			// playerCharacter.setMoney(BigInteger.valueOf(77800359970l));
 		} catch (WindowsAPIException e) {
 			e.printStackTrace();
 		} finally {

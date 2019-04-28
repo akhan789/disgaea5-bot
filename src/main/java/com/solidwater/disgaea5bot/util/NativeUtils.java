@@ -4,6 +4,9 @@
 package com.solidwater.disgaea5bot.util;
 
 import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import com.solidwater.disgaea5bot.util.exception.WindowsAPIException;
 import com.solidwater.disgaea5bot.util.winapi.ExtendedAdvapi32;
@@ -13,12 +16,14 @@ import com.solidwater.disgaea5bot.util.winapi.ExtendedUser32;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import com.sun.jna.platform.win32.BaseTSD.SIZE_T;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.Kernel32Util;
 import com.sun.jna.platform.win32.Psapi.MODULEINFO;
 import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinDef.HMODULE;
 import com.sun.jna.platform.win32.WinDef.HWND;
+import com.sun.jna.platform.win32.WinDef.LPVOID;
 import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.platform.win32.WinNT.HANDLEByReference;
@@ -248,18 +253,34 @@ public class NativeUtils {
 //	      bytes[0] << 24 | (bytes[1] & 0xFF) << 16 | (bytes[2] & 0xFF) << 8 | (bytes[3] & 0xFF);
 //	    return Float.intBitsToFloat(intBits);  
 //	}
-	public static boolean setDynamicAddressValue(HANDLE handle, BigInteger dynamicAddress, byte[] data)
+
+	public static boolean setDynamicAddressValue(HANDLE windowHandle, BigInteger dynamicAddress, Byte[] data)
 			throws WindowsAPIException {
 		// System.out.println("converted to: " + byteArrayToFloat(data));
 		// System.out.println("converted to: " + Integer.pa(data));
+		NativeUtils.virtualProtectEx(windowHandle, dynamicAddress); // might not be necessary
 		long size = data.length;
+		List<Byte> reverseArray = Arrays.asList(data);
+		Collections.reverse(reverseArray);
 		Memory buffer = new Memory(size);
-		if (!NativeUtils.KERNEL_32.WriteProcessMemory(handle, new Pointer(dynamicAddress.longValue()), buffer,
-				(int) buffer.size(), new IntByReference(0))) {
+		for (int i = 0; i < reverseArray.size(); i++) {
+			buffer.setByte(i, reverseArray.get(i));
+		}
+
+		if (!NativeUtils.KERNEL_32.WriteProcessMemory(windowHandle, new Pointer(dynamicAddress.longValue()), buffer,
+				(int) buffer.size(), null)) {
 			throw new WindowsAPIException("WriteProcessMemory failed. Error " + Native.getLastError() + ": "
 					+ Kernel32Util.getLastErrorMessage());
 		}
 		return true;
+	}
+
+	private static void virtualProtectEx(HANDLE windowHandle, BigInteger dynamicAddress) throws WindowsAPIException {
+		if (!NativeUtils.KERNEL_32.VirtualProtectEx(windowHandle, new LPVOID(new Pointer(dynamicAddress.longValue())),
+				new SIZE_T(256l), new DWORD(WinNT.PAGE_EXECUTE_READWRITE), new IntByReference(0))) {
+			throw new WindowsAPIException("VirtualProtectEx failed. Error " + Native.getLastError() + ": "
+					+ Kernel32Util.getLastErrorMessage());
+		}
 	}
 
 	private static BigInteger getValue(HANDLE windowHandle, BigInteger processBaseAddress, BigInteger[] offsets)
@@ -268,7 +289,6 @@ public class NativeUtils {
 		for (int i = 0; i < offsets.length; i++) {
 			// 8 bytes to read for 64 bit.
 			// TODO: Maybe check if we're 32 bit or 64 bit process in future?
-			NativeUtils.lastDynamicAddress = dynamicAddress.add(offsets[i]);
 			if (i == 0) {
 				dynamicAddress = NativeUtils.getDynamicAddressValue(windowHandle, processBaseAddress.add(offsets[i]),
 						8l);
@@ -351,6 +371,7 @@ public class NativeUtils {
 		Memory buffer = new Memory(bytesToRead);
 		if (NativeUtils.KERNEL_32.ReadProcessMemory(handle, new Pointer(processBaseAddress.longValue()), buffer,
 				(int) buffer.size(), bytesRead)) {
+			NativeUtils.lastDynamicAddress = processBaseAddress;
 			return BigInteger.valueOf(buffer.getLong(0l));
 		} else {
 			throw new WindowsAPIException("ReadProcessMemory failed. Error " + Native.getLastError() + ": "
